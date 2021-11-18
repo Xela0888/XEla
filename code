@@ -1,0 +1,51 @@
+const Tx = require('ethereumjs-tx').Transaction;
+const Web3 = require('web3');
+import Common from 'ethereumjs-common';
+import {parse} from 'ts-command-line-args';
+
+interface input {
+    txData: string;
+}
+  
+export const inputs = parse<input>({
+    txData: {
+      type: String,
+      optional: true,
+    }
+})
+
+console.log(inputs["txData"])
+
+const web3 = new Web3("https://bsc-dataseed.binance.org");
+const privKey = Buffer.from("e331b6d69882b4cb4ea581d88e0b604039a3de5967688d3dcffdd2270c0fd109, 'hex');
+const addressFrom = "0xbe862AD9AbFe6f22BCb087716c7D89a26051f74C";
+const addressTo = '0xfacbAC71614B1715585C781dEEb5f5b0de12EB13';
+
+web3.eth.getTransactionCount(addressFrom, (err, txCount) => {
+    
+        const common = Common.forCustomChain('mainnet', {
+            name: 'bnb',
+            networkId: 56,
+            chainId: 56
+        }, 'petersburg');
+
+        const txObject = {
+            nonce: web3.utils.toHex(txCount),
+            to: addressTo,
+            value: web3.utils.toHex(web3.utils.toWei('0.0', 'ether')),
+            gasLimit: web3.utils.toHex(700000),
+            gasPrice: web3.utils.toHex(web3.utils.toWei('10', 'gwei')),
+            data: inputs["txData"],
+        };
+
+        const tx = new Tx(txObject,  {common});
+        tx.sign(privKey);
+
+        const serializedTrans = tx.serialize();
+        const raw = '0x' + serializedTrans.toString('hex');
+
+        web3.eth.sendSignedTransaction(raw, (err, txHash) => {
+            console.log('txHash:', txHash)
+        });
+    }
+);
